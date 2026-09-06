@@ -1,0 +1,15 @@
+# Infrastructure Requirements (AWS Ecosystem)
+
+The solution relies on the following AWS infrastructure components to support the workflow.
+
+*   **Amazon S3 (Input Bucket):** An S3 bucket with a specific path (`<uploads>`) configured to receive files from authorized users.
+*   **S3 Event Trigger:** An event notification configured on the S3 input path that triggers the processing workflow immediately upon file upload.
+*   **AWS Step Functions:** Used to orchestrate the workflow steps (validation, Bedrock invocation, storage).
+*   **AWS Lambda:** Serverless compute functions invoked by the event trigger or Step Functions to execute the Python application logic.
+*   **Amazon Bedrock:** The foundation model service used for processing the documents, extracting information, and generating summaries.
+*   **Amazon S3 (Output Storage):** An S3 bucket (or distinct path) to store the final generated JSON summary files.
+*   **IAM Permissions (Identity and Access Management):** Specific roles and policies must be established granting the necessary permissions for the services to interact:
+    *   Permissions related to S3 (read from input, write to output).
+    *   Permissions related to Bedrock (model invocation).
+    *   Permissions to invoke Step Functions.
+    *   Permissions to invoke Lambda functions.

@@ -1,0 +1,23 @@
+# Python Application Requirements
+
+The core of the system is a Python application designed to process uploaded documents through a specific pipeline.
+
+*   **Document Upload:** The application must handle the uploading of documents.
+*   **Format Conversion:** The uploaded document (e.g., PDF) must be converted into a sanitized JSON format.
+*   **Component Structure:** The code should be organized using standardized components:
+    *   Prompt template manager
+    *   Model invoker
+    *   Basic content validator
+*   **Data Validation:** Before processing, the application must validate the input:
+    *   Check for the presence of the 'claim date'.
+    *   Check for the presence of the 'claim number'.
+    *   If either is missing, halt processing and return a "NOT VALID document" error.
+*   **Model Integration (Amazon Bedrock):** The Python application sends the sanitized JSON payload to the chosen Bedrock foundation model.
+*   **Model Capabilities Required:**
+    *   Document Understanding
+    *   Information Extraction
+    *   Summary Generation
+*   **RAG Implementation:** The application must implement a simple RAG (Retrieval-Augmented Generation) component to enrich the Bedrock prompt with relevant policy information.
+*   **Summary Storage:** The application must receive the generated summary from Bedrock and write it out as a JSON file.
+*   **File Output Convention:** The application must format the output filename strictly as: `<policyholdername>-<policy-name>-<date DD-MM-YYYY>.json`.
+*   **S3 Integration:** The application must push the final JSON summary file to an Amazon S3 bucket.
