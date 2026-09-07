@@ -45,17 +45,6 @@ data "aws_iam_policy_document" "lambda_execution" {
       "arn:aws:s3:::${var.s3_bucket_name}/*"
     ]
   }
-
-  statement {
-    sid    = "AllowBedrockInvoke"
-    effect = "Allow"
-
-    actions = [
-      "bedrock:InvokeModel"
-    ]
-
-    resources = ["*"]
-  }
 }
 
 resource "aws_iam_role" "lambda_execution_role" {
@@ -114,16 +103,6 @@ data "aws_iam_policy_document" "stepfunctions_execution" {
     ]
   }
 
-  statement {
-    sid    = "AllowBedrockInvoke"
-    effect = "Allow"
-
-    actions = [
-      "bedrock:InvokeModel"
-    ]
-
-    resources = ["*"]
-  }
 }
 
 resource "aws_iam_role" "stepfunctions_execution_role" {
