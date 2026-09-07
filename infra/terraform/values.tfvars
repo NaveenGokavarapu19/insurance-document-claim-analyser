@@ -1,0 +1,7 @@
+aws_region      = "us-east-1"
+project_name    = "insurance-claim-analyzer"
+environment     = "dev"
+owner           = "platform"
+cost_center     = "personal"
+s3_bucket_name  = "naveen-test-bucket-1997"
+lambda_code_zip = "code.zip"

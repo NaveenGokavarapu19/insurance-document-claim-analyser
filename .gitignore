@@ -219,3 +219,10 @@ __marimo__/
 
 # creds
 rootkey*
+
+# terraform files 
+.terraform
+*.lock.hcl
+
+*.tfstate
+*.tfstate.*
