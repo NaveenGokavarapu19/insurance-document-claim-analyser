@@ -8,8 +8,8 @@ resource "aws_sfn_state_machine" "document_claim_workflow" {
     StartAt = "ProcessDocument"
     States = {
       ProcessDocument = {
-        Type     = "Task"
-        Resource = "arn:aws:states:::lambda:invoke"
+        Type       = "Task"
+        Resource   = "arn:aws:states:::lambda:invoke"
         OutputPath = "$.Payload"
         Parameters = {
           FunctionName = aws_lambda_function.document_processor.arn
@@ -20,13 +20,13 @@ resource "aws_sfn_state_machine" "document_claim_workflow" {
         Next = "WaitForProcessing"
       }
       WaitForProcessing = {
-        Type = "Wait"
+        Type    = "Wait"
         Seconds = 30
-        Next = "SummarizeDocument"
+        Next    = "SummarizeDocument"
       }
       SummarizeDocument = {
-        Type     = "Task"
-        Resource = "arn:aws:states:::lambda:invoke"
+        Type       = "Task"
+        Resource   = "arn:aws:states:::lambda:invoke"
         OutputPath = "$.Payload"
         Parameters = {
           FunctionName = aws_lambda_function.summarizer.arn

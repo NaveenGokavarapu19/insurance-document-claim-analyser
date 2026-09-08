@@ -31,7 +31,7 @@ variable "cost_center" {
 variable "s3_bucket_name" {
   description = "Name of the S3 bucket used for document input and output processing."
   type        = string
-  default     = "naveen-test-bucket-1997"
+  default     = "amazon-genai-bucket-naveen"
 }
 
 variable "lambda_code_zip" {
