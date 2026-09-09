@@ -1,0 +1,125 @@
+## 📋 Architecture Breakdown: Insurance Claim Document Processing Pipeline
+
+### Module 1: Validate Uploaded File Contract
+- **Suggested Function Name:** `validate_pdf_upload_contract`
+- **Role:** Validate that the uploaded input is a PDF document and reject any non-PDF payload before downstream processing begins.
+- **Target Ingestion/Output:** Ingests upload metadata and file bytes/stream, returns validated PDF handle or a structured validation error.
+
+### Module 2: Convert PDF to Sanitized JSON
+- **Suggested Function Name:** `convert_pdf_to_sanitized_json`
+- **Role:** Parse the uploaded PDF and transform extracted claim content into a sanitized JSON document suitable for model processing.
+- **Target Ingestion/Output:** Ingests validated PDF handle and returns sanitized JSON payload.
+
+### Module 3: Validate Required Claim Fields
+- **Suggested Function Name:** `validate_required_claim_fields`
+- **Role:** Enforce presence checks for `$.claim_date` and `$.claim_number`; if either is missing, halt the pipeline and return `NOT VALID document`.
+- **Target Ingestion/Output:** Ingests sanitized JSON payload and returns validated claim JSON or a terminal validation error.
+
+### Module 4: Resolve Policy Context from S3 RAG Source
+- **Suggested Function Name:** `retrieve_policy_context_from_s3`
+- **Role:** Retrieve relevant policy context from S3-hosted JSON knowledge sources by matching `policy_id`, returning enrichment context for prompting.
+- **Target Ingestion/Output:** Ingests validated claim JSON and S3 configuration, returns policy context records.
+
+### Module 5: Build Bedrock Prompt Payload
+- **Suggested Function Name:** `build_bedrock_prompt_payload`
+- **Role:** Assemble a final prompt using claim JSON plus retrieved policy context through a prompt template manager, producing model-ready input.
+- **Target Ingestion/Output:** Ingests validated claim JSON, policy context, and prompt template configuration, returns Bedrock request payload.
+
+### Module 6: Invoke Bedrock Model
+- **Suggested Function Name:** `invoke_bedrock_model`
+- **Role:** Invoke the configured Amazon Bedrock foundation model in `us-east-1` to perform document understanding, information extraction, and summary generation.
+- **Target Ingestion/Output:** Ingests Bedrock request payload and model configuration, returns model response with generated summary content.
+
+### Module 7: Validate and Normalize Model Output
+- **Suggested Function Name:** `validate_and_normalize_summary_output`
+- **Role:** Validate generated response structure and normalize summary content into a stable JSON schema before persistence.
+- **Target Ingestion/Output:** Ingests raw model response and returns normalized summary JSON.
+
+### Module 8: Build Output Filename
+- **Suggested Function Name:** `build_summary_output_filename`
+- **Role:** Generate output filename exactly as `<policy_holder_name>-<policy-id>-<DD-MM-YYYY>.json`, allowing underscore characters in `policy_holder_name`.
+- **Target Ingestion/Output:** Ingests policy_holder_name, policy_id, and date value, returns final filename string.
+
+### Module 9: Persist Summary JSON Locally
+- **Suggested Function Name:** `persist_summary_json_file`
+- **Role:** Persist the normalized summary JSON to local storage using the strict output filename format before cloud upload.
+- **Target Ingestion/Output:** Ingests normalized summary JSON, output directory, and filename, returns saved local file path.
+
+### Module 10: Upload Final Summary to S3
+- **Suggested Function Name:** `upload_summary_file_to_s3`
+- **Role:** Upload the persisted JSON summary file to the configured S3 bucket using the same strict naming convention for the S3 object key.
+- **Target Ingestion/Output:** Ingests local file path, bucket name, and object key, returns upload result metadata.
+
+### Module 11: Orchestrate End-to-End Processing Flow
+- **Suggested Function Name:** `process_claim_document_pipeline`
+- **Role:** Coordinate all pipeline modules in order with fail-fast behavior, centralized error handling, and final success response generation.
+- **Target Ingestion/Output:** Ingests upload request and runtime configuration, returns processing status, output filename, and S3 location.
+
+---
+
+## 🚀 Ready-to-Run comment-to-code prompts
+Use the comment-to-code skill to write the function comment in the target function.
+
+Function name: validate_pdf_upload_contract
+
+Requirement: Validate that the incoming uploaded document is a PDF only by checking MIME type and extension guardrails, reject non-PDF input with a structured error, and return a validated file handle for downstream processing.
+
+Use the comment-to-code skill to write the function comment in the target function.
+
+Function name: convert_pdf_to_sanitized_json
+
+Requirement: Extract claim-relevant text and fields from the validated PDF and convert them into a sanitized JSON payload that removes unsafe or irrelevant artifacts while preserving data needed for validation and inference.
+
+Use the comment-to-code skill to write the function comment in the target function.
+
+Function name: validate_required_claim_fields
+
+Requirement: Validate that $.claim_date and $.claim_number exist in the sanitized JSON payload; if either field is missing, stop processing immediately and return the exact NOT VALID document error outcome.
+
+Use the comment-to-code skill to write the function comment in the target function.
+
+Function name: retrieve_policy_context_from_s3
+
+Requirement: Retrieve policy knowledge documents from S3-hosted JSON sources by matching policy_id from the claim payload, and return the matched context snippets required for prompt enrichment.
+
+Use the comment-to-code skill to write the function comment in the target function.
+
+Function name: build_bedrock_prompt_payload
+
+Requirement: Build a structured Bedrock prompt payload by combining sanitized claim JSON and retrieved policy context through a prompt template manager so the model can perform understanding, extraction, and summarization tasks.
+
+Use the comment-to-code skill to write the function comment in the target function.
+
+Function name: invoke_bedrock_model
+
+Requirement: Invoke a configurable Amazon Bedrock model endpoint in us-east-1 with the assembled prompt payload, support optional generation parameters, and return the raw model response for post-processing.
+
+Use the comment-to-code skill to write the function comment in the target function.
+
+Function name: validate_and_normalize_summary_output
+
+Requirement: Validate model response integrity and normalize extracted fields and summary text into a predictable JSON structure that can be safely persisted and uploaded.
+
+Use the comment-to-code skill to write the function comment in the target function.
+
+Function name: build_summary_output_filename
+
+Requirement: Construct the output filename strictly as <policy_holder_name>-<policy-id>-<DD-MM-YYYY>.json, preserving underscore support in policy_holder_name and enforcing date formatting compliance.
+
+Use the comment-to-code skill to write the function comment in the target function.
+
+Function name: persist_summary_json_file
+
+Requirement: Write the normalized summary JSON to local storage using the strict generated filename and return the persisted file path with robust file I/O error handling.
+
+Use the comment-to-code skill to write the function comment in the target function.
+
+Function name: upload_summary_file_to_s3
+
+Requirement: Upload the persisted local summary JSON file to the configured S3 bucket using the canonical filename as the S3 object name, and return object URI and upload confirmation metadata.
+
+Use the comment-to-code skill to write the function comment in the target function.
+
+Function name: process_claim_document_pipeline
+
+Requirement: Orchestrate the full workflow from upload validation through PDF conversion, claim field validation, S3-based RAG retrieval, Bedrock invocation, output normalization, local persistence, and S3 upload with fail-fast error propagation.

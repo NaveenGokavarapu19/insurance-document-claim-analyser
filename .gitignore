@@ -226,3 +226,7 @@ rootkey*
 
 *.tfstate
 *.tfstate.*
+
+# artifacts 
+
+*.zip
