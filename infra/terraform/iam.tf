@@ -119,3 +119,46 @@ resource "aws_iam_role_policy" "stepfunctions_execution_policy" {
 
   policy = data.aws_iam_policy_document.stepfunctions_execution.json
 }
+
+data "aws_iam_policy_document" "eventbridge_assume_role" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["events.amazonaws.com"]
+    }
+
+    actions = ["sts:AssumeRole"]
+  }
+}
+
+data "aws_iam_policy_document" "eventbridge_start_stepfunctions" {
+  statement {
+    sid    = "AllowStartClaimWorkflow"
+    effect = "Allow"
+
+    actions = [
+      "states:StartExecution"
+    ]
+
+    resources = [
+      aws_sfn_state_machine.document_claim_workflow.arn
+    ]
+  }
+}
+
+resource "aws_iam_role" "eventbridge_start_stepfunctions_role" {
+  name = "${local.resource_prefix}-eventbridge-stepfunctions-role"
+
+  assume_role_policy = data.aws_iam_policy_document.eventbridge_assume_role.json
+
+  tags = local.default_tags
+}
+
+resource "aws_iam_role_policy" "eventbridge_start_stepfunctions_policy" {
+  name = "${local.resource_prefix}-eventbridge-stepfunctions-policy"
+  role = aws_iam_role.eventbridge_start_stepfunctions_role.id
+
+  policy = data.aws_iam_policy_document.eventbridge_start_stepfunctions.json
+}

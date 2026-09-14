@@ -39,3 +39,9 @@ variable "lambda_code_zip" {
   type        = string
   default     = "code.zip"
 }
+ 
+variable "s3_documents_prefix" {
+  description = "S3 prefix under which uploaded documents should trigger the Step Functions workflow."
+  type        = string
+  default     = "resources/documents/"
+}
