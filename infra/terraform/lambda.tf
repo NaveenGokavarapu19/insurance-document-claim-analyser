@@ -32,9 +32,10 @@ resource "aws_lambda_function" "document_processor" {
 
   environment {
     variables = {
-      BUCKET_NAME  = var.s3_bucket_name
-      PROJECT_NAME = var.project_name
-      ENVIRONMENT  = var.environment
+      BUCKET_NAME                = var.s3_bucket_name
+      PROJECT_NAME               = var.project_name
+      ENVIRONMENT                = var.environment
+      LAMBDA_EXECUTION_ROLE_NAME = var.lambda_execution_role_name
     }
   }
 
@@ -65,9 +66,12 @@ resource "aws_lambda_function" "summarizer" {
 
   environment {
     variables = {
-      BUCKET_NAME  = var.s3_bucket_name
-      PROJECT_NAME = var.project_name
-      ENVIRONMENT  = var.environment
+      BUCKET_NAME                = var.s3_bucket_name
+      PROJECT_NAME               = var.project_name
+      ENVIRONMENT                = var.environment
+      LAMBDA_EXECUTION_ROLE_NAME = var.lambda_execution_role_name
+      BEDROCK_MODEL_ID           = var.bedrock_model_id
+      BEDROCK_REGION             = var.aws_region
     }
   }
 

@@ -17,7 +17,21 @@ resource "aws_sfn_state_machine" "document_claim_workflow" {
             "input.$" = "$"
           }
         }
-        Next = "WaitForProcessing"
+        Next = "RouteProcessingOutcome"
+      }
+      RouteProcessingOutcome = {
+        Type = "Choice"
+        Choices = [
+          {
+            Variable      = "$.contains_images"
+            BooleanEquals = true
+            Next          = "DocumentProcessingComplete"
+          }
+        ]
+        Default = "WaitForProcessing"
+      }
+      DocumentProcessingComplete = {
+        Type = "Succeed"
       }
       WaitForProcessing = {
         Type    = "Wait"
