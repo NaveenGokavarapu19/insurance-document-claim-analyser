@@ -45,10 +45,24 @@ data "aws_iam_policy_document" "lambda_execution" {
       "arn:aws:s3:::${var.s3_bucket_name}/*"
     ]
   }
+
+  statement {
+    sid    = "AllowBedrockInvoke"
+    effect = "Allow"
+
+    actions = [
+      "bedrock:InvokeModel",
+      "bedrock:InvokeModelWithResponseStream"
+    ]
+
+    resources = [
+      "arn:aws:bedrock:${var.aws_region}::foundation-model/${var.bedrock_model_id}"
+    ]
+  }
 }
 
 resource "aws_iam_role" "lambda_execution_role" {
-  name = "${local.resource_prefix}-lambda-role"
+  name = var.lambda_execution_role_name
 
   assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
 
