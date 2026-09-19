@@ -1,35 +1,36 @@
 import json
 import os
 
-from utils import get_boto3_client
+from utils import BedrockClient, create_assumed_role_session, get_current_account_id
 
 MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "amazon.nova-micro-v1:0")
 REGION_NAME = os.environ.get("BEDROCK_REGION") or os.environ.get("AWS_REGION") or "us-east-1"
 
 
 def _invoke_bedrock(prompt):
+    """Invoke Bedrock by creating a session first, then injecting it into BedrockClient."""
     role_name = os.environ.get("LAMBDA_EXECUTION_ROLE_NAME")
     if not role_name:
         raise ValueError("LAMBDA_EXECUTION_ROLE_NAME is not configured.")
 
-    client = get_boto3_client(
-        "bedrock-runtime",
+    account_id = get_current_account_id()
+    if not account_id:
+        raise ValueError("Unable to resolve the current AWS account ID.")
+
+    session = create_assumed_role_session(
         role_name=role_name,
+        account_id=account_id,
+        session_name="insurance-claim-analyser-session",
         region_name=REGION_NAME,
     )
 
-    response = client.converse(
-        modelId=MODEL_ID,
-        messages=[
-            {
-                "role": "user",
-                "content": [{"text": prompt}],
-            }
-        ],
+    bedrock_client = BedrockClient(
+        model_id=MODEL_ID,
+        session=session,
+        region_name=REGION_NAME,
     )
-
-    output = response.get("output", {}).get("message", {}).get("content", [])
-    return " ".join(item.get("text", "") for item in output if isinstance(item, dict))
+    result = bedrock_client.converse(prompt=prompt)
+    return result.get("text", "")
 
 
 def lambda_handler(event, context):

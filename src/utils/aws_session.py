@@ -17,28 +17,9 @@ def _get_current_account_id() -> str | None:
         return None
 
 
-def _get_current_partition() -> str:
-    try:
-        sts_client = boto3.client("sts")
-        response = sts_client.get_caller_identity()
-        caller_arn = response.get("Arn")
-        if isinstance(caller_arn, str) and caller_arn.startswith("arn:"):
-            return caller_arn.split(":", 2)[1]
-    except Exception:
-        pass
-    return "aws"
-
-
-def _build_role_arn(role_name: str) -> str:
-    if not isinstance(role_name, str) or not role_name.strip():
-        raise ValueError("Role name must be a non-empty string.")
-
-    account_id = _get_current_account_id()
-    if not account_id:
-        raise ValueError("Unable to determine the current AWS account ID.")
-
-    partition = _get_current_partition()
-    return f"arn:{partition}:iam::{account_id}:role/{role_name.strip()}"
+def get_current_account_id() -> str | None:
+    """Return the active AWS account ID for the current execution context."""
+    return _get_current_account_id()
 
 
 def _get_current_region() -> str | None:
@@ -50,21 +31,38 @@ def _get_current_region() -> str | None:
     return session.region_name
 
 
+def _is_same_account_and_region(account_id: str, region_name: str | None) -> bool:
+    if not isinstance(account_id, str) or not account_id.strip():
+        return False
+
+    current_account_id = _get_current_account_id()
+    if not current_account_id:
+        return False
+
+    current_region = _get_current_region()
+    target_region = region_name or current_region
+    return account_id.strip() == current_account_id.strip() and target_region == current_region
+
+
 def create_assumed_role_session(
     role_name: str,
+    account_id: str,
     session_name: str = DEFAULT_SESSION_NAME,
     region_name: str | None = None,
     external_id: str | None = None,
 ) -> boto3.session.Session:
-    """Return a boto3 Session using a temporary STS AssumeRole session."""
+    """Return a boto3 Session using a temporary STS AssumeRole session for cross-account work."""
     if not isinstance(role_name, str) or not role_name.strip():
         raise ValueError("Role name must be a non-empty string.")
+    if not isinstance(account_id, str) or not account_id.strip():
+        raise ValueError("Account ID must be provided explicitly for the target role.")
 
-    resolved_role_arn = _build_role_arn(role_name)
     current_region = region_name or _get_current_region()
+    if _is_same_account_and_region(account_id, current_region):
+        return boto3.session.Session(region_name=current_region)
 
     assume_role_kwargs: dict[str, Any] = {
-        "RoleArn": resolved_role_arn,
+        "RoleArn": f"arn:{os.environ.get('AWS_PARTITION', 'aws')}:iam::{account_id.strip()}:role/{role_name.strip()}",
         "RoleSessionName": session_name or DEFAULT_SESSION_NAME,
     }
     if external_id is not None:
@@ -84,16 +82,18 @@ def create_assumed_role_session(
 def get_boto3_client(
     service_name: str,
     role_name: str,
+    account_id: str,
     region_name: str | None = None,
     session_name: str = DEFAULT_SESSION_NAME,
     **kwargs: Any,
 ):
-    """Return a boto3 client built from the custom assumed-role session."""
+    """Return a boto3 client built from the active session or a temporary assumed-role session."""
     if not isinstance(service_name, str) or not service_name.strip():
         raise ValueError("Service name must be a non-empty string.")
 
     custom_session = create_assumed_role_session(
         role_name=role_name,
+        account_id=account_id,
         session_name=session_name,
         region_name=region_name,
     )
@@ -104,16 +104,18 @@ def get_boto3_client(
 def get_boto3_resource(
     service_name: str,
     role_name: str,
+    account_id: str,
     region_name: str | None = None,
     session_name: str = DEFAULT_SESSION_NAME,
     **kwargs: Any,
 ):
-    """Return a boto3 resource built from the custom assumed-role session."""
+    """Return a boto3 resource built from the active session or a temporary assumed-role session."""
     if not isinstance(service_name, str) or not service_name.strip():
         raise ValueError("Service name must be a non-empty string.")
 
     custom_session = create_assumed_role_session(
         role_name=role_name,
+        account_id=account_id,
         session_name=session_name,
         region_name=region_name,
     )
