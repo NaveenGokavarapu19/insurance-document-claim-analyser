@@ -45,6 +45,12 @@ def extract_tables_from_pdf(pdf_source: str | Path, password: str | None = None)
     return tables
 
 
+def pdf_contains_images(pdf_source: str | Path, password: str | None = None) -> bool:
+    """Return True when any page in the PDF contains one or more image objects."""
+    with load_pdf(pdf_source, password=password) as pdf:
+        return any(bool(page.images) for page in pdf.pages)
+
+
 def table_to_records(table: list[list[str | None]]) -> list[dict[str, str]]:
     """Convert a table into a list of row dictionaries using the first row as headers."""
     if not table:

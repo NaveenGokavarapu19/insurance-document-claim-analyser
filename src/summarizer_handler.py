@@ -14,8 +14,6 @@ def _invoke_bedrock(prompt):
         raise ValueError("LAMBDA_EXECUTION_ROLE_NAME is not configured.")
 
     account_id = get_current_account_id()
-    if not account_id:
-        raise ValueError("Unable to resolve the current AWS account ID.")
 
     session = create_assumed_role_session(
         role_name=role_name,
@@ -34,7 +32,8 @@ def _invoke_bedrock(prompt):
 
 
 def lambda_handler(event, context):
-    print("summarizer_handler invoked")
+
+    
 
     prompt = "Say hello in one sentence."
     try:

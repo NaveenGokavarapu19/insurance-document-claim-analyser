@@ -1,3 +1,13 @@
+import logging
+import tempfile
+from pathlib import Path
+
+from utils import get_file_from_s3, pdf_contains_images
+
+
+logger = logging.getLogger(__name__)
+
+
 def validate_pdf_upload_contract(event_payload):
     """
     This function is responsible for taking the event_payload.
@@ -33,31 +43,27 @@ def validate_pdf_upload_contract(event_payload):
     error message is to be printed/logged with the error and error code is returned
     along with error message.
     """
-    if not isinstance(event_payload, dict) or not event_payload:
-        raise ValueError("Event payload must be a non-empty dictionary.")
 
-    s3_reference = event_payload.get("s3")
-    if s3_reference is not None and not isinstance(s3_reference, dict):
-        raise ValueError("S3 reference must be a dictionary when the 's3' field is used.")
+
+    normalized_payload = event_payload.get("input") if isinstance(event_payload.get("input"), dict) else event_payload
+
+
+    s3_reference = normalized_payload.get("s3")
 
     bucket_value = (
-        event_payload.get("bucket")
-        or event_payload.get("s3_bucket")
-        or event_payload.get("bucket_name")
+        normalized_payload.get("bucket")
+        or normalized_payload.get("s3_bucket")
+        or normalized_payload.get("bucket_name")
         or (s3_reference or {}).get("bucket")
     )
     key_value = (
-        event_payload.get("key")
-        or event_payload.get("s3_key")
-        or event_payload.get("object_key")
+        normalized_payload.get("key")
+        or normalized_payload.get("s3_key")
+        or normalized_payload.get("object_key")
         or (s3_reference or {}).get("key")
     )
 
-    if not isinstance(bucket_value, str) or not bucket_value.strip():
-        raise ValueError("Event payload must include a non-empty S3 bucket value.")
 
-    if not isinstance(key_value, str) or not key_value.strip():
-        raise ValueError("Event payload must include a non-empty S3 object key value.")
 
     bucket_name = bucket_value.strip()
     object_key = key_value.strip()
@@ -71,10 +77,37 @@ def validate_pdf_upload_contract(event_payload):
         "s3_uri": f"s3://{bucket_name}/{object_key}",
     }
 
+
 def lambda_handler(event, context):
-    print("document_handler invoked")
-    return {
-        "statusCode": 200,
-        "body": "Hello from document_handler",
-        "event": event,
-    }
+    logger.info("document_handler invoked")
+    local_pdf_path: str | None = None
+
+    try:
+        validated_pdf_reference = validate_pdf_upload_contract(event)
+
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temporary_pdf_file:
+            local_pdf_path = temporary_pdf_file.name
+
+        get_file_from_s3(
+            bucket_name=validated_pdf_reference["bucket"],
+            s3_key=validated_pdf_reference["key"],
+            local_file_path=local_pdf_path,
+        )
+
+        contains_images = pdf_contains_images(local_pdf_path)
+
+        return {
+            "bucket": validated_pdf_reference["bucket"],
+            "key": validated_pdf_reference["key"],
+            "s3_uri": validated_pdf_reference["s3_uri"],
+            "contains_images": contains_images,
+        }
+    except Exception:
+        logger.exception("document_handler failed to process the PDF event.")
+        raise
+    finally:
+        if local_pdf_path:
+            try:
+                Path(local_pdf_path).unlink(missing_ok=True)
+            except OSError:
+                logger.warning("Unable to remove temporary PDF file: %s", local_pdf_path)
