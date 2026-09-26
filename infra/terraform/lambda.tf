@@ -67,7 +67,9 @@ resource "aws_lambda_function" "summarizer" {
   environment {
     variables = {
       BUCKET_NAME                = var.s3_bucket_name
+      PREFIX                     = var.prefix
       PROJECT_NAME               = var.project_name
+      OBJECT_PATH                = var.object_path
       ENVIRONMENT                = var.environment
       LAMBDA_EXECUTION_ROLE_NAME = var.lambda_execution_role_name
       BEDROCK_MODEL_ID           = var.bedrock_model_id

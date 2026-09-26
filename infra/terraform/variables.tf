@@ -10,6 +10,12 @@ variable "project_name" {
   default     = "insurance-claim-analyzer"
 }
 
+variable "prefix" {
+  description = "Optional Lambda environment prefix used when building output object keys."
+  type        = string
+  default     = ""
+}
+
 variable "environment" {
   description = "Deployment environment name."
   type        = string
@@ -50,6 +56,12 @@ variable "bedrock_model_id" {
   description = "Amazon Bedrock model identifier used by the summarizer Lambda."
   type        = string
   default     = "amazon.nova-micro-v1:0"
+}
+
+variable "object_path" {
+  description = "S3 object path used by the summarizer Lambda for results output."
+  type        = string
+  default     = "resources/results"
 }
 
 variable "s3_documents_prefix" {
