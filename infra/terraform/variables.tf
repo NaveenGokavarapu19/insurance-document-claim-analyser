@@ -69,3 +69,10 @@ variable "s3_documents_prefix" {
   type        = string
   default     = "resources/documents/"
 }
+
+
+variable "pdf_layer_layer_zip_name" {
+  description = "name of the layer which contains pdf modules"
+  type        = string
+  default     = "pdf_layer.zip"
+}

@@ -1,3 +1,29 @@
+locals {
+  # Goes up two levels (from infra/terraform to project root), then into layers/
+  layer_zip_path = "${path.module}/../../layers/pdf_layer.zip"
+}
+
+resource "aws_s3_object" "pdf_layer_zip" {
+  bucket = var.s3_bucket_name
+  key    = "lambda-layers/${var.pdf_layer_layer_zip_name}"
+  source = local.layer_zip_path
+  etag   = filemd5(local.layer_zip_path)
+}
+
+resource "aws_lambda_layer_version" "pdf_layer" {
+  layer_name               = "pdf_layer"
+  description              = "Python 3.12 PDF and Pillow dependencies"
+  s3_bucket                = aws_s3_object.pdf_layer_zip.bucket
+  s3_key                   = aws_s3_object.pdf_layer_zip.key
+  s3_object_version        = aws_s3_object.pdf_layer_zip.version_id
+  compatible_runtimes      = ["python3.12"]
+  compatible_architectures = ["x86_64"] # Match --platform=linux/amd64 from Dockerfile
+
+  # Publishes a new layer version whenever the zip content changes
+  source_code_hash = filebase64sha256(local.layer_zip_path)
+}
+
+
 data "archive_file" "lambda_code_zip" {
   type        = "zip"
   source_dir  = "${path.module}/../../src"
@@ -29,6 +55,11 @@ resource "aws_lambda_function" "document_processor" {
   s3_bucket        = var.s3_bucket_name
   s3_key           = "lambda-artifacts/${var.lambda_code_zip}"
   source_code_hash = data.archive_file.lambda_code_zip.output_base64sha256
+
+  layers = [
+    aws_lambda_layer_version.pdf_layer.arn
+    ]
+
 
   environment {
     variables = {
@@ -63,6 +94,10 @@ resource "aws_lambda_function" "summarizer" {
   s3_bucket        = var.s3_bucket_name
   s3_key           = "lambda-artifacts/${var.lambda_code_zip}"
   source_code_hash = data.archive_file.lambda_code_zip.output_base64sha256
+
+  layers = [
+    aws_lambda_layer_version.pdf_layer.arn
+  ]
 
   environment {
     variables = {
