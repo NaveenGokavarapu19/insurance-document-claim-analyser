@@ -70,3 +70,23 @@ def table_to_records(table: list[list[str | None]]) -> list[dict[str, str]]:
             records.append(record)
 
     return records
+
+
+def parse_claim_tables(raw_tables):
+    def clean(val):
+        return val.replace("\n", "" if "@" in val else " ").strip() if val else ""
+
+    parsed_data = {}
+    for header, *rows in raw_tables:
+        if header[1] is None:  # Key-Value table
+            parsed_data[header[0]] = {
+                k.rstrip(":"): clean(v)
+                for row in rows
+                for k, v in zip(row[::2], row[1::2]) if k
+            }
+        else:  # Line items table
+            parsed_data["LINE ITEMS"] = [
+                {k: clean(v) for k, v in zip(header, row)}
+                for row in rows
+            ]
+    return parsed_data
