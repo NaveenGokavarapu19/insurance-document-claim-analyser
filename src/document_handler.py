@@ -2,7 +2,7 @@ import logging
 import tempfile
 from pathlib import Path
 
-from utils import get_file_from_s3, pdf_contains_images
+from utils import get_file_from_s3, pdf_contains_images,load_pdf,extract_tables_from_pdf,parse_claim_tables
 
 
 logger = logging.getLogger(__name__)
@@ -94,13 +94,31 @@ def lambda_handler(event, context):
             local_file_path=local_pdf_path,
         )
 
-        contains_images = pdf_contains_images(local_pdf_path)
+        pdf_object = load_pdf(local_pdf_path)
+
+        contains_images = pdf_contains_images(pdf_object=pdf_object)
+        tables_extracted = extract_tables_from_pdf(pdf_object)
+        cleaned_json = parse_claim_tables(tables_extracted)
+        claim_information = cleaned_json.get("CLAIM INFORMATION",None)
+        policy_holder_information = cleaned_json.get("POLICYHOLDER INFORMATION",None)
+        vehicle_information = cleaned_json.get("VEHICLE & INCIDENT DETAILS",None)
+        policy_dict = dict()
+        policy_dict["claim_number"] = claim_information.get("Claim Number")
+        policy_dict["date_filed"] = claim_information.get("Date Filed") 
+        policy_dict["date_of_loss"] = claim_information.get("Date of Loss") 
+        policy_dict["policy_holder_name"] = policy_holder_information.get("Full Name") 
+        policy_dict["policy_holder_address"] = policy_holder_information.get("Address") 
+        policy_dict["vehicle_make"] = vehicle_information.get("Vehicle Make") 
+        policy_dict["vehicle_model"] = vehicle_information.get("Vehicle Model") 
+        policy_dict["vehicle_year"] = vehicle_information.get("Vehicle Year") 
+        policy_dict["incident_location"] = vehicle_information.get("Incident Location") 
 
         return {
             "bucket": validated_pdf_reference["bucket"],
             "key": validated_pdf_reference["key"],
             "s3_uri": validated_pdf_reference["s3_uri"],
             "contains_images": contains_images,
+            "policy_details": policy_dict
         }
     except Exception:
         logger.exception("document_handler failed to process the PDF event.")

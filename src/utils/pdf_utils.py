@@ -36,19 +36,23 @@ def extract_text_from_pdf(pdf_source: str | Path, password: str | None = None) -
     return "\n".join(extract_text_by_page(pdf_source, password=password))
 
 
-def extract_tables_from_pdf(pdf_source: str | Path, password: str | None = None) -> list[list[list[str | None]]]:
+def extract_tables_from_pdf(pdf_object) -> list[list[list[str | None]]]:
     """Return all tables from all PDF pages."""
     tables: list[list[list[str | None]]] = []
-    with load_pdf(pdf_source, password=password) as pdf:
-        for page in pdf.pages:
-            tables.extend(page.extract_tables())
+    for page in pdf_object.pages:
+        tables.extend(page.extract_tables())
     return tables
 
 
-def pdf_contains_images(pdf_source: str | Path, password: str | None = None) -> bool:
+def pdf_contains_images(pdf_object) -> bool:
     """Return True when any page in the PDF contains one or more image objects."""
-    with load_pdf(pdf_source, password=password) as pdf:
-        return any(bool(page.images) for page in pdf.pages)
+    for page in pdf_object.pages:
+        if page.images:
+            return True
+        return False 
+
+    # with load_pdf(pdf_source, password=password) as pdf:
+    #     return any(bool(page.images) for page in pdf.pages)
 
 
 def table_to_records(table: list[list[str | None]]) -> list[dict[str, str]]:
@@ -73,6 +77,7 @@ def table_to_records(table: list[list[str | None]]) -> list[dict[str, str]]:
 
 
 def parse_claim_tables(raw_tables):
+    # method to use for extracting data
     def clean(val):
         return val.replace("\n", "" if "@" in val else " ").strip() if val else ""
 
