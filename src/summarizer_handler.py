@@ -2,6 +2,7 @@ import json
 import os
 
 from utils import BedrockClient, create_assumed_role_session, get_current_account_id
+from resources import PromptTemplateManager
 
 MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "amazon.nova-micro-v1:0")
 REGION_NAME = os.environ.get("BEDROCK_REGION") or os.environ.get("AWS_REGION") or "us-east-1"
@@ -27,6 +28,7 @@ def _invoke_bedrock(prompt):
         session=session,
         region_name=REGION_NAME,
     )
+
     result = bedrock_client.converse(prompt=prompt)
     return result.get("text", "")
 
@@ -35,8 +37,15 @@ def lambda_handler(event, context):
 
     
 
-    prompt = "Say hello in one sentence."
+    # prompt = "Say hello in one sentence."
+    prompt_manager = PromptTemplateManager()
+    extracted_data = event.get("policy_details",None)
+    prompt = prompt_manager.get_prompt(
+            template_name="generate_summary",
+            extracted_info = extracted_data)
+
     try:
+        print(f"prompt is prompt")
         response_text = _invoke_bedrock(prompt)
     except Exception as exc:
         print(f"Bedrock call failed: {exc}")
