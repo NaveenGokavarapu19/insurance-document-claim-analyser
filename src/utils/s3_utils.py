@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 import boto3
 
-logger = logging.getLogger(__name__)
+from .observability import logger
 
 
 def create_s3_prefix(project_name: str = "", prefix: str = "", object_path: str = "", object_name: str = "") -> str:

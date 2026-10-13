@@ -1,11 +1,8 @@
-import logging
 import tempfile
 from pathlib import Path
 
 from utils import get_file_from_s3, pdf_contains_images,load_pdf,extract_tables_from_pdf,parse_claim_tables
-
-
-logger = logging.getLogger(__name__)
+from utils.observability import logger
 
 
 def validate_pdf_upload_contract(event_payload):
