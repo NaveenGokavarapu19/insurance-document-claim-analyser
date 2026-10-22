@@ -5,6 +5,8 @@ from typing import Any
 
 import boto3
 
+from logger import logger
+
 DEFAULT_SESSION_NAME = "insurance-claim-analyser-session"
 
 
@@ -14,6 +16,7 @@ def _get_current_account_id() -> str | None:
         response = sts_client.get_caller_identity()
         return str(response.get("Account"))
     except Exception:
+        logger.exception("Unable to retrieve AWS caller identity")
         return None
 
 
@@ -70,6 +73,12 @@ def create_assumed_role_session(
 
     sts_client = boto3.client("sts")
     credentials = sts_client.assume_role(**assume_role_kwargs)["Credentials"]
+    logger.info(
+        "Assumed AWS role",
+        role_name=role_name.strip(),
+        account_id=account_id.strip(),
+        region_name=current_region,
+    )
 
     return boto3.session.Session(
         aws_access_key_id=credentials["AccessKeyId"],

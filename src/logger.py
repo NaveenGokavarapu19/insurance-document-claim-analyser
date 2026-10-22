@@ -1,4 +1,4 @@
-"""Simple logging setup using AWS Powertools."""
+"""Logging and observability setup using AWS Powertools."""
 from aws_lambda_powertools import Logger, Tracer, Metrics
 from aws_lambda_powertools.metrics import MetricUnit
 
