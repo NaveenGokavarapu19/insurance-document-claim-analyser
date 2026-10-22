@@ -77,7 +77,43 @@ def table_to_records(table: list[list[str | None]]) -> list[dict[str, str]]:
 
 
 def parse_claim_tables(raw_tables):
-    # method to use for extracting data
+    """Convert pdfplumber tables into claim sections and line-item records.
+
+    ``raw_tables`` is the list returned by ``extract_tables_from_pdf``: each
+    table is a list of rows, and each row is a list of cell values. The first
+    row is treated as the table header.
+
+    Tables are classified using the second cell of that header:
+
+    * If it is ``None``, the table is treated as key/value data. Remaining rows
+      are read as alternating key and value cells, so a row like
+      ``["Claim Number:", "C-123", "Date Filed:", "2025-01-01"]`` becomes
+      ``{"Claim Number": "C-123", "Date Filed": "2025-01-01"}``. These fields
+      are stored under the first header cell (for example,
+      ``"CLAIM INFORMATION"``).
+    * Otherwise, the table is treated as a line-item table. Header cells are
+      paired with each remaining row to make a list of records under
+      ``"LINE ITEMS"``.
+
+    Cell values are normalized by replacing embedded newlines with spaces and
+    trimming surrounding whitespace. For values containing ``@``, newlines
+    are removed instead, preserving email addresses split across PDF lines.
+    ``None`` and empty cells normalize to an empty string.
+
+    For example, key/value tables produce a structure like
+    ``{"CLAIM INFORMATION": {"Claim Number": "C-123"}}``; line-item tables
+    produce ``{"LINE ITEMS": [{"Description": "Repair", "Amount": "$100"}]}``.
+    The result can therefore contain both section dictionaries and a
+    ``"LINE ITEMS"`` list.
+
+    Simplification opportunities: validate empty or malformed tables before
+    indexing the header, and extract the key/value and line-item conversions
+    into small helpers if this parser grows. It also assumes the
+    project-specific table layout; ``zip`` silently ignores unmatched cells,
+    while repeated section names or multiple line-item tables overwrite earlier
+    entries with the same output key.
+    """
+
     def clean(val):
         return val.replace("\n", "" if "@" in val else " ").strip() if val else ""
 
