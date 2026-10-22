@@ -9,35 +9,75 @@ import pdfplumber
 
 
 def load_pdf(pdf_source: str | Path, password: str | None = None) -> pdfplumber.PDF:
-    """Open a PDF source and return a pdfplumber PDF object."""
+    """Open a PDF and return its ``pdfplumber.PDF`` handle.
+
+    Args:
+        pdf_source: Filesystem path or other source accepted by
+            ``pdfplumber.open``.
+        password: Optional password for an encrypted PDF.
+
+    Returns:
+        An open PDF object. The caller is responsible for closing it, preferably
+        by using it as a context manager.
+    """
     return pdfplumber.open(pdf_source, password=password)
 
 
 def get_pdf_page_count(pdf_source: str | Path, password: str | None = None) -> int:
-    """Return the total number of pages in a PDF."""
+    """Return the number of pages in a PDF, closing the file after reading it.
+
+    Args:
+        pdf_source: Path or source accepted by :func:`load_pdf`.
+        password: Optional password for an encrypted PDF.
+    """
     with load_pdf(pdf_source, password=password) as pdf:
         return len(pdf.pages)
 
 
 def get_pdf_metadata(pdf_source: str | Path, password: str | None = None) -> dict[str, Any]:
-    """Return the metadata dictionary for a PDF document."""
+    """Return PDF metadata as a dictionary, using an empty dict when absent.
+
+    Args:
+        pdf_source: Path or source accepted by :func:`load_pdf`.
+        password: Optional password for an encrypted PDF.
+    """
     with load_pdf(pdf_source, password=password) as pdf:
         return dict(pdf.metadata or {})
 
 
 def extract_text_by_page(pdf_source: str | Path, password: str | None = None) -> list[str]:
-    """Return a list of extracted text strings, one per page."""
+    """Extract text from each page and close the PDF when finished.
+
+    Pages with no extractable text are represented by an empty string.
+
+    Args:
+        pdf_source: Path or source accepted by :func:`load_pdf`.
+        password: Optional password for an encrypted PDF.
+    """
     with load_pdf(pdf_source, password=password) as pdf:
         return [page.extract_text() or "" for page in pdf.pages]
 
 
 def extract_text_from_pdf(pdf_source: str | Path, password: str | None = None) -> str:
-    """Return the full extracted text for the PDF."""
+    """Extract text from all pages and join it with newline separators.
+
+    Pages with no extractable text contribute an empty string. The PDF is
+    closed after extraction.
+
+    Args:
+        pdf_source: Path or source accepted by :func:`load_pdf`.
+        password: Optional password for an encrypted PDF.
+    """
     return "\n".join(extract_text_by_page(pdf_source, password=password))
 
 
 def extract_tables_from_pdf(pdf_object) -> list[list[list[str | None]]]:
-    """Return all tables from all PDF pages."""
+    """Extract and flatten all tables from an already-open PDF object.
+
+    Each returned table is a list of rows, and each row is a list of cell
+    values. Cells that pdfplumber could not extract may be ``None``. This
+    function does not close ``pdf_object``; its caller owns that resource.
+    """
     tables: list[list[list[str | None]]] = []
     for page in pdf_object.pages:
         tables.extend(page.extract_tables())
@@ -45,18 +85,34 @@ def extract_tables_from_pdf(pdf_object) -> list[list[list[str | None]]]:
 
 
 def pdf_contains_images(pdf_object) -> bool:
-    """Return True when any page in the PDF contains one or more image objects."""
+    """Return whether any page in the open PDF contains an image object.
+
+    This checks for embedded PDF image objects, not whether a page visually
+    contains rasterized or scanned content. The caller remains responsible for
+    closing ``pdf_object``.
+    """
     for page in pdf_object.pages:
         if page.images:
             return True
-        return False 
+    return False
 
     # with load_pdf(pdf_source, password=password) as pdf:
     #     return any(bool(page.images) for page in pdf.pages)
 
 
 def table_to_records(table: list[list[str | None]]) -> list[dict[str, str]]:
-    """Convert a table into a list of row dictionaries using the first row as headers."""
+    """Convert a row-based table into dictionaries keyed by its first row.
+
+    Header cells are stripped; empty headers are skipped. Missing or ``None``
+    cell values become empty strings, and extra cells without a matching header
+    are ignored. An empty table returns an empty list.
+
+    Args:
+        table: Table rows, with column names in the first row.
+
+    Returns:
+        One dictionary per data row. Rows that produce no fields are omitted.
+    """
     if not table:
         return []
 
@@ -115,6 +171,7 @@ def parse_claim_tables(raw_tables):
     """
 
     def clean(val):
+        """Normalize a cell by removing newlines from emails and spacing others."""
         return val.replace("\n", "" if "@" in val else " ").strip() if val else ""
 
     parsed_data = {}
