@@ -2,6 +2,7 @@ import json
 import os
 
 from utils import BedrockClient, create_assumed_role_session, get_current_account_id
+from logger import logger
 from resources import PromptTemplateManager
 
 MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "amazon.nova-micro-v1:0")
@@ -33,6 +34,7 @@ def _invoke_bedrock(prompt):
     return result.get("text", "")
 
 
+@logger.inject_lambda_context
 def lambda_handler(event, context):
 
     
@@ -44,11 +46,17 @@ def lambda_handler(event, context):
             template_name="generate_summary",
             extracted_info = extracted_data)
 
+    logger.info("summarizer_handler invoked", model_id=MODEL_ID)
+    logger.info("Preparing prompt")
     try:
-        print(f"prompt is prompt")
         response_text = _invoke_bedrock(prompt)
+        logger.info(
+            "Bedrock call completed",
+            model_id=MODEL_ID,
+            response_length=len(response_text),
+        )
     except Exception as exc:
-        print(f"Bedrock call failed: {exc}")
+        logger.exception("Bedrock call failed")
         response_text = f"Bedrock call failed: {exc}"
 
     return {

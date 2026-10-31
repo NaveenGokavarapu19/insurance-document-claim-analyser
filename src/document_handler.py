@@ -1,11 +1,8 @@
-import logging
 import tempfile
 from pathlib import Path
 
 from utils import get_file_from_s3, pdf_contains_images,load_pdf,extract_tables_from_pdf,parse_claim_tables
-
-
-logger = logging.getLogger(__name__)
+from logger import logger
 
 
 def validate_pdf_upload_contract(event_payload):
@@ -78,6 +75,7 @@ def validate_pdf_upload_contract(event_payload):
     }
 
 
+@logger.inject_lambda_context
 def lambda_handler(event, context):
     logger.info("document_handler invoked")
     local_pdf_path: str | None = None
@@ -98,6 +96,11 @@ def lambda_handler(event, context):
 
         contains_images = pdf_contains_images(pdf_object=pdf_object)
         tables_extracted = extract_tables_from_pdf(pdf_object)
+        logger.info(
+            "Extracted tables from PDF",
+            table_count=len(tables_extracted),
+            contains_images=contains_images,
+        )
         cleaned_json = parse_claim_tables(tables_extracted)
         claim_information = cleaned_json.get("CLAIM INFORMATION",None)
         policy_holder_information = cleaned_json.get("POLICYHOLDER INFORMATION",None)
@@ -121,11 +124,14 @@ def lambda_handler(event, context):
             "policy_details": policy_dict
         }
     except Exception:
-        logger.exception("document_handler failed to process the PDF event.")
+        logger.exception("document_handler failed to process the PDF event")
         raise
     finally:
         if local_pdf_path:
             try:
                 Path(local_pdf_path).unlink(missing_ok=True)
             except OSError:
-                logger.warning("Unable to remove temporary PDF file: %s", local_pdf_path)
+                logger.warning(
+                    "Unable to remove temporary PDF file",
+                    local_pdf_path=local_pdf_path,
+                )

@@ -5,6 +5,8 @@ from typing import Any
 
 import boto3
 
+from logger import logger
+
 
 class BedrockClient:
     """Bedrock Runtime wrapper that reuses an injected boto3 session.
@@ -166,5 +168,10 @@ class BedrockClient:
 
         try:
             return json.loads(raw_text)
-        except Exception:
+        except json.JSONDecodeError as exc:
+            logger.warning(
+                "Bedrock response body was not valid JSON; returning raw text",
+                error=exc.msg,
+                position=exc.pos,
+            )
             return raw_text

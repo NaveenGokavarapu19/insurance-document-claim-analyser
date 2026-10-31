@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 import boto3
 
-logger = logging.getLogger(__name__)
+from logger import logger
 
 
 def create_s3_prefix(project_name: str = "", prefix: str = "", object_path: str = "", object_name: str = "") -> str:
@@ -26,7 +25,7 @@ def create_s3_prefix(project_name: str = "", prefix: str = "", object_path: str 
     total_values = (project_name, prefix, object_path, object_name)
     s3_parts_list = [value for value in total_values if value]
     s3_path = "/".join(s3_parts_list)
-    print(s3_path)
+    logger.debug("Generated S3 object key", path_part_count=len(s3_parts_list))
     return s3_path
 
 
@@ -64,10 +63,19 @@ def get_file_from_s3(bucket_name: str, s3_key: str, local_file_path: str) -> str
     try:
         s3_client = boto3.client("s3")
         s3_client.download_file(bucket_name.strip(), s3_key.strip(), str(local_path))
-        logger.info("Downloaded S3 object %s from bucket %s to %s", s3_key, bucket_name, local_path)
+        logger.info(
+            "Downloaded S3 object",
+            s3_key=s3_key,
+            bucket_name=bucket_name,
+            local_path=str(local_path),
+        )
         return str(local_path)
     except Exception as exc:
-        logger.exception("Failed to download S3 object %s from bucket %s", s3_key, bucket_name)
+        logger.exception(
+            "Failed to download S3 object",
+            s3_key=s3_key,
+            bucket_name=bucket_name,
+        )
         raise FileNotFoundError(f"Unable to download S3 object '{s3_key}' from bucket '{bucket_name}': {exc}") from exc
 
 
@@ -101,7 +109,7 @@ def read_file(file_path: str) -> str | bytes:
             return local_path.read_text(encoding="utf-8")
         return local_path.read_bytes()
     except Exception as exc:
-        logger.exception("Failed to read file %s", file_path)
+        logger.exception("Failed to read file", file_path=file_path)
         raise OSError(f"Unable to read file '{file_path}': {exc}") from exc
 
 
@@ -156,8 +164,17 @@ def push_file_to_s3(
     try:
         s3_client = boto3.client("s3")
         s3_client.upload_file(str(local_path), bucket_name.strip(), object_key)
-        logger.info("Uploaded file %s to S3 bucket %s with key %s", local_path, bucket_name, object_key)
+        logger.info(
+            "Uploaded file to S3",
+            local_path=str(local_path),
+            bucket_name=bucket_name,
+            s3_key=object_key,
+        )
         return object_key
     except Exception as exc:
-        logger.exception("Failed to upload file %s to S3 bucket %s", file_path, bucket_name)
+        logger.exception(
+            "Failed to upload file to S3",
+            file_path=file_path,
+            bucket_name=bucket_name,
+        )
         raise OSError(f"Unable to upload file '{file_path}' to bucket '{bucket_name}': {exc}") from exc
